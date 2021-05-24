@@ -88,7 +88,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
+        // 最大连接数
         maxClientCnxns = maxcc;
+
+        // 使用java nio 创建serverSocketChannel 绑定端口
         this.ss = ServerSocketChannel.open();
         ss.socket().setReuseAddress(true);
         LOG.info("binding to port " + addr);
@@ -110,6 +113,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
     @Override
     public void start() {
         // ensure thread is started once and only once
+        // 启动线程
         if (thread.getState() == Thread.State.NEW) {
             thread.start();
         }

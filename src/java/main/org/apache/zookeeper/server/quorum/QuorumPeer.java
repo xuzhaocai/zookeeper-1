@@ -351,7 +351,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     public InetSocketAddress getQuorumAddress(){
         return myQuorumAddr;
     }
-
+    // 选举算法
     private int electionType;
 
     Election electionAlg;
@@ -407,8 +407,11 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     @Override
     public synchronized void start() {
         loadDataBase();
-        cnxnFactory.start();        
+        //启动连接工厂的那个线程
+        cnxnFactory.start();
+        // 启动leader选举
         startLeaderElection();
+        // 启动线程
         super.start();
     }
 
@@ -461,14 +464,22 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         responder.running = false;
         responder.interrupt();
     }
+
+    /**
+     * 启动leader 选举
+     */
     synchronized public void startLeaderElection() {
     	try {
+
+    	    // 创建自己当前的选票
     		currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
     	} catch(IOException e) {
     		RuntimeException re = new RuntimeException(e.getMessage());
     		re.setStackTrace(e.getStackTrace());
     		throw re;
     	}
+
+    	//这里为了找出自己的 addr
         for (QuorumServer p : getView().values()) {
             if (p.id == myid) {
                 myQuorumAddr = p.addr;
@@ -487,6 +498,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 throw new RuntimeException(e);
             }
         }
+
+        // 根据算法类型创建 对应的算法对象
         this.electionAlg = createElectionAlgorithm(electionType);
     }
     
@@ -567,6 +580,15 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 this, new ZooKeeperServer.BasicDataTreeBuilder(), this.zkDb));
     }
 
+    /**
+     * 根据选举类型创建对应的算法对象
+     * 0 基于UDP的LeaderElection
+     * 1 基于UDP的FastLeaderElection
+     * 2 基于UDP和认证的FastLeaderElection
+     * 3 基于TCP的FastLeaderElection
+     * @param electionAlgorithm 算法类型
+     * @return
+     */
     protected Election createElectionAlgorithm(int electionAlgorithm){
         Election le=null;
                 
@@ -585,7 +607,10 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
             qcm = new QuorumCnxManager(this);
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
+
+                // 启动listener
                 listener.start();
+                // 创建选举算法实现
                 le = new FastLeaderElection(this, qcm);
             } else {
                 LOG.error("Null listener when initializing cnx manager");
@@ -665,6 +690,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
              * Main loop
              */
             while (running) {
+
+                // 状态，开始的时候是LOOKING
                 switch (getPeerState()) {
                 case LOOKING:
                     LOG.info("LOOKING");
@@ -713,7 +740,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                         }
                     } else {
                         try {
-                            setCurrentVote(makeLEStrategy().lookForLeader());
+                            Vote vote = makeLEStrategy().lookForLeader();
+                            setCurrentVote(vote);
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);
                             setPeerState(ServerState.LOOKING);

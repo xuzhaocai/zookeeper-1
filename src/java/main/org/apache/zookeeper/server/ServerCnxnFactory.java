@@ -94,14 +94,26 @@ public abstract class ServerCnxnFactory {
     }
 
     public abstract void closeAll();
-    
+
+    /**
+     * 获取工厂
+     * @return
+     * @throws IOException
+     */
     static public ServerCnxnFactory createFactory() throws IOException {
+
+        //去system 参数里面获取zookeeper.serverCnxnFactory
+        //默认是没有的
         String serverCnxnFactoryName =
             System.getProperty(ZOOKEEPER_SERVER_CNXN_FACTORY);
+
+        // 使用nio的 NIOServerCnxnFactory
         if (serverCnxnFactoryName == null) {
             serverCnxnFactoryName = NIOServerCnxnFactory.class.getName();
         }
         try {
+
+            // 反射创建实例
             return (ServerCnxnFactory) Class.forName(serverCnxnFactoryName)
                                                 .newInstance();
         } catch (Exception e) {

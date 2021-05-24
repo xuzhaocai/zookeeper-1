@@ -57,6 +57,8 @@ public class QuorumPeerConfig {
 
     protected int initLimit;
     protected int syncLimit;
+
+    // 选举算法
     protected int electionAlg = 3;
     protected int electionPort = 2182;
     protected final HashMap<Long,QuorumServer> servers =
@@ -113,7 +115,7 @@ public class QuorumPeerConfig {
             } finally {
                 in.close();
             }
-
+            //解析properties 里面的配置项到配置类中
             parseProperties(cfg);
         } catch (IOException e) {
             throw new ConfigException("Error processing " + path, e);
@@ -145,7 +147,7 @@ public class QuorumPeerConfig {
                 clientPortAddress = value.trim();
             } else if (key.equals("tickTime")) {
                 tickTime = Integer.parseInt(value);
-            } else if (key.equals("maxClientCnxns")) {
+            } else if (key.equals("maxClientCnxns")) {// 最大连接数
                 maxClientCnxns = Integer.parseInt(value);
             } else if (key.equals("minSessionTimeout")) {
                 minSessionTimeout = Integer.parseInt(value);
@@ -155,6 +157,8 @@ public class QuorumPeerConfig {
                 initLimit = Integer.parseInt(value);
             } else if (key.equals("syncLimit")) {
                 syncLimit = Integer.parseInt(value);
+
+                // 选举算法
             } else if (key.equals("electionAlg")) {
                 electionAlg = Integer.parseInt(value);
             } else if (key.equals("peerType")) {
@@ -181,13 +185,17 @@ public class QuorumPeerConfig {
                 }
                 InetSocketAddress addr = new InetSocketAddress(parts[0],
                         Integer.parseInt(parts[1]));
+
+                // server.1=127.0.0.1:2888
                 if (parts.length == 2) {
                     servers.put(Long.valueOf(sid), new QuorumServer(sid, addr));
+                // server.1=127.0.0.1:2888:3888
                 } else if (parts.length == 3) {
                     InetSocketAddress electionAddr = new InetSocketAddress(
                             parts[0], Integer.parseInt(parts[2]));
                     servers.put(Long.valueOf(sid), new QuorumServer(sid, addr,
                             electionAddr));
+                // server.1=127.0.0.1:2888:3888:observer
                 } else if (parts.length == 4) {
                     InetSocketAddress electionAddr = new InetSocketAddress(
                             parts[0], Integer.parseInt(parts[2]));
@@ -283,9 +291,12 @@ public class QuorumPeerConfig {
             LOG.error("Invalid configuration, only one server specified (ignoring)");
             servers.clear();
         } else if (servers.size() > 1) {
+            // 就2个节点话，打印警告
             if (servers.size() == 2) {
                 LOG.warn("No server failure will be tolerated. " +
                     "You need at least 3 servers.");
+
+                //集群个数是偶数个的时候，打印警告
             } else if (servers.size() % 2 == 0) {
                 LOG.warn("Non-optimial configuration, consider an odd number of servers.");
             }
@@ -338,7 +349,7 @@ public class QuorumPeerConfig {
             // Now add observers to servers, once the quorums have been
             // figured out
             servers.putAll(observers);
-    
+            //TODO  在datadir 目录下需要有一个myid 文件
             File myIdFile = new File(dataDir, "myid");
             if (!myIdFile.exists()) {
                 throw new IllegalArgumentException(myIdFile.toString()

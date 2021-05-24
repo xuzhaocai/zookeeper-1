@@ -75,6 +75,7 @@ public class QuorumPeerMain {
     public static void main(String[] args) {
         QuorumPeerMain main = new QuorumPeerMain();
         try {
+            // 初始化&& 运行
             main.initializeAndRun(args);
         } catch (IllegalArgumentException e) {
             LOG.error("Invalid arguments, exiting abnormally", e);
@@ -96,17 +97,22 @@ public class QuorumPeerMain {
     protected void initializeAndRun(String[] args)
         throws ConfigException, IOException
     {
+
+        // 如果就一个参数的话，它认为你传过来的是个配置文件的路径
         QuorumPeerConfig config = new QuorumPeerConfig();
         if (args.length == 1) {
+            // 解析配置文件
             config.parse(args[0]);
         }
 
-        // Start and schedule the the purge task
+        // Start and schedule the the purge task 启动datadir的清理任务
         DatadirCleanupManager purgeMgr = new DatadirCleanupManager(config
                 .getDataDir(), config.getDataLogDir(), config
                 .getSnapRetainCount(), config.getPurgeInterval());
         purgeMgr.start();
 
+
+        // 如果是集群模式的话（也就是你配置了一堆server）
         if (args.length == 1 && config.servers.size() > 0) {
             runFromConfig(config);
         } else {
@@ -117,6 +123,11 @@ public class QuorumPeerMain {
         }
     }
 
+    /**
+     * 根据配置文件启动
+     * @param config
+     * @throws IOException
+     */
     public void runFromConfig(QuorumPeerConfig config) throws IOException {
       try {
           ManagedUtil.registerLog4jMBeans();
@@ -126,6 +137,7 @@ public class QuorumPeerMain {
   
       LOG.info("Starting quorum peer");
       try {
+          // 连接工厂
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           cnxnFactory.configure(config.getClientPortAddress(),
                                 config.getMaxClientCnxns());

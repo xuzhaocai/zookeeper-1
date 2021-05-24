@@ -412,14 +412,14 @@ public class FastLeaderElection implements Election {
          * @param manager   Connection manager
          */
         Messenger(QuorumCnxManager manager) {
-
+            // 创建发送消息的 并创建新线程扔到线程中
             this.ws = new WorkerSender(manager);
 
             Thread t = new Thread(this.ws,
                     "WorkerSender[myid=" + self.getId() + "]");
             t.setDaemon(true);
             t.start();
-
+            // 创建接收消息的 并创建新线程扔到线程中
             this.wr = new WorkerReceiver(manager);
 
             t = new Thread(this.wr,
@@ -482,9 +482,12 @@ public class FastLeaderElection implements Election {
         this.self = self;
         proposedLeader = -1;
         proposedZxid = -1;
-
+        // 创建发送队列
         sendqueue = new LinkedBlockingQueue<ToSend>();
+        // 接收队列
         recvqueue = new LinkedBlockingQueue<Notification>();
+
+        // 创建送信者对象 ，这里面就是2个线程，一个发送消息的，一个接收消息的
         this.messenger = new Messenger(manager);
     }
 
@@ -533,6 +536,7 @@ public class FastLeaderElection implements Election {
                       " (n.round), " + sid + " (recipient), " + self.getId() +
                       " (myid), 0x" + Long.toHexString(proposedEpoch) + " (n.peerEpoch)");
             }
+            // 放到发送队列中
             sendqueue.offer(notmsg);
         }
     }
@@ -739,6 +743,7 @@ public class FastLeaderElection implements Election {
 
             LOG.info("New election. My id =  " + self.getId() +
                     ", proposed zxid=0x" + Long.toHexString(proposedZxid));
+            // 这里就是向所有的集群节点发送选票 ，这里是放到发送队列中了
             sendNotifications();
 
             /*
@@ -751,6 +756,7 @@ public class FastLeaderElection implements Election {
                  * Remove next notification from queue, times out after 2 times
                  * the termination time
                  */
+                // 从接收队列中获取通知
                 Notification n = recvqueue.poll(notTimeout,
                         TimeUnit.MILLISECONDS);
 
@@ -759,9 +765,12 @@ public class FastLeaderElection implements Election {
                  * Otherwise processes new notification.
                  */
                 if(n == null){
+                    //如果有发送queue的话
                     if(manager.haveDelivered()){
                         sendNotifications();
                     } else {
+
+                        // 进行连接
                         manager.connectAll();
                     }
 

@@ -34,8 +34,12 @@ public class Vote {
     public Vote(long id, long zxid, long peerEpoch) {
         this.id = id;
         this.zxid = zxid;
+
+        // 选举届
         this.electionEpoch = -1;
         this.peerEpoch = peerEpoch;
+
+        //状态是观望状态
         this.state = ServerState.LOOKING;
     }
 

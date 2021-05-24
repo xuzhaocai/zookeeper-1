@@ -137,6 +137,8 @@ public class QuorumCnxManager {
     }
 
     public QuorumCnxManager(QuorumPeer self) {
+        
+        // 创建接收队列 大小是100
         this.recvQueue = new ArrayBlockingQueue<Message>(RECV_CAPACITY);
         this.queueSendMap = new ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>>();
         this.senderWorkerMap = new ConcurrentHashMap<Long, SendWorker>();
@@ -184,7 +186,7 @@ public class QuorumCnxManager {
             closeSocket(sock);
             return false;
         }
-        
+        // 如果对端的serverId 大于我们自己的serverId，就关闭socket，这里只允许 serverId大的向 serverId小的建立连接
         // If lost the challenge, then drop the new connection
         if (sid > self.getId()) {
             LOG.info("Have smaller server identifier, so dropping the " +
@@ -299,6 +301,8 @@ public class QuorumCnxManager {
     public void toSend(Long sid, ByteBuffer b) {
         /*
          * If sending message to myself, then simply enqueue it (loopback).
+         *
+         * 如果是自己的话，就直接扔到接收队列中
          */
         if (self.getId() == sid) {
              b.position(0);
@@ -310,10 +314,15 @@ public class QuorumCnxManager {
              /*
               * Start a new connection if doesn't have one already.
               */
+
+             // 如果queueSendMap 中没有这个serverId的发送队列中
              if (!queueSendMap.containsKey(sid)) {
                  ArrayBlockingQueue<ByteBuffer> bq = new ArrayBlockingQueue<ByteBuffer>(
                          SEND_CAPACITY);
+                 // 缓存起来
                  queueSendMap.put(sid, bq);
+
+
                  addToSendQueue(bq, b);
 
              } else {
@@ -336,6 +345,8 @@ public class QuorumCnxManager {
      */
     
     synchronized void connectOne(long sid){
+
+        // 如果缓存中不存在该sid的senderWorker
         if (senderWorkerMap.get(sid) == null){
             InetSocketAddress electionAddr;
             if (self.quorumPeers.containsKey(sid)) {
@@ -351,10 +362,12 @@ public class QuorumCnxManager {
                 }
                 Socket sock = new Socket();
                 setSockOpts(sock);
+                // 进行连接
                 sock.connect(self.getView().get(sid).electionAddr, cnxTO);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Connected to server " + sid);
                 }
+                //初始化连接
                 initiateConnection(sock, sid);
             } catch (UnresolvedAddressException e) {
                 // Sun doesn't include the address that causes this

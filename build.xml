@@ -100,7 +100,7 @@
 
     <property name="ivy.version" value="2.2.0"/>
     <property name="ivy.url"
-              value="http://repo2.maven.org/maven2/org/apache/ivy/ivy" />
+              value="https://repo1.maven.org/maven2/org/apache/ivy/ivy" />
     <property name="ivy.home" value="${user.home}/.ant" />
     <property name="ivy.lib" value="${build.dir}/lib"/>
     <property name="ivy.package.lib" value="${build.dir}/package/lib"/>
@@ -1639,8 +1639,8 @@
      </condition>
 
      <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists">
-       <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
-            dest="${src.dir}/java/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
+       <!--<get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+            dest="${src.dir}/java/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />-->
 
        <bunzip2 src="${src.dir}/java/ant-eclipse-1.0.bin.tar.bz2"/>
 
