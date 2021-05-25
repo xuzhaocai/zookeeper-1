@@ -112,11 +112,11 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
             this.electionAddr = electionAddr;
             this.type = type;
         }
-        
+        //地址
         public InetSocketAddress addr;
-
+        // 选举地址
         public InetSocketAddress electionAddr;
-        
+        // serverId
         public long id;
         
         public LearnerType type = LearnerType.PARTICIPANT;
@@ -652,6 +652,9 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         return null;
     }
 
+    /**
+     * run方法
+     */
     @Override
     public void run() {
         setName("QuorumPeer" + "[myid=" + getId() + "]" +
@@ -761,10 +764,14 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                         setPeerState(ServerState.LOOKING);
                     }
                     break;
+
+
+                    // 是follower角色的时候
                 case FOLLOWING:
                     try {
                         LOG.info("FOLLOWING");
                         setFollower(makeFollower(logFactory));
+                        // 追随leader
                         follower.followLeader();
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception",e);
@@ -774,10 +781,15 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                         setPeerState(ServerState.LOOKING);
                     }
                     break;
+
+
+                //当当选leader的时候
                 case LEADING:
                     LOG.info("LEADING");
                     try {
+                        //创建leader对象
                         setLeader(makeLeader(logFactory));
+                        //进行lead
                         leader.lead();
                         setLeader(null);
                     } catch (Exception e) {

@@ -179,6 +179,8 @@ public class Leader {
     Leader(QuorumPeer self,LeaderZooKeeperServer zk) throws IOException {
         this.self = self;
         try {
+
+            // 创建serverSocket
             ss = new ServerSocket();
             ss.setReuseAddress(true);
             ss.bind(new InetSocketAddress(self.getQuorumAddress().getPort()));
@@ -297,11 +299,15 @@ public class Leader {
             try {
                 while (!stop) {
                     try{
+
+                        // 接受请求，建立连接
                         Socket s = ss.accept();
                         // start with the initLimit, once the ack is processed
                         // in LearnerHandler switch to the syncLimit
                         s.setSoTimeout(self.tickTime * self.initLimit);
                         s.setTcpNoDelay(nodelay);
+
+                        //处理follower请求的
                         LearnerHandler fh = new LearnerHandler(s, Leader.this);
                         fh.start();
                     } catch (SocketException e) {
@@ -357,7 +363,9 @@ public class Leader {
 
             // Start thread that waits for connection requests from 
             // new followers.
+            // 创建acceptor
             cnxAcceptor = new LearnerCnxAcceptor();
+            // 启动
             cnxAcceptor.start();
             
             readyToStart = true;

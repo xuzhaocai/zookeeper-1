@@ -148,6 +148,8 @@ public class Learner {
      * @throws IOException
      */
     void readPacket(QuorumPacket pp) throws IOException {
+
+        // 读取leader响应回来的
         synchronized (leaderIs) {
             leaderIs.readRecord(pp, "packet");
         }
@@ -208,6 +210,7 @@ public class Learner {
     }
     
     /**
+     * 连接leader
      * Establish a connection with the Leader found by findLeader. Retries
      * 5 times before giving up. 
      * @param addr - the address of the Leader to connect to.
@@ -219,6 +222,8 @@ public class Learner {
     throws IOException, ConnectException, InterruptedException {
         sock = new Socket();        
         sock.setSoTimeout(self.tickTime * self.initLimit);
+
+        //重试5次
         for (int tries = 0; tries < 5; tries++) {
             try {
                 sock.connect(addr, self.tickTime * self.syncLimit);
@@ -235,11 +240,15 @@ public class Learner {
                     sock.setSoTimeout(self.tickTime * self.initLimit);
                 }
             }
+            // 间隔1s
             Thread.sleep(1000);
         }
+        // 创建jute  output缓冲流
         leaderIs = BinaryInputArchive.getArchive(new BufferedInputStream(
                 sock.getInputStream()));
         bufferedOutput = new BufferedOutputStream(sock.getOutputStream());
+
+        // jute output缓冲流
         leaderOs = BinaryOutputArchive.getArchive(bufferedOutput);
     }   
     
@@ -267,8 +276,10 @@ public class Learner {
         BinaryOutputArchive boa = BinaryOutputArchive.getArchive(bsid);
         boa.writeRecord(li, "LearnerInfo");
         qp.setData(bsid.toByteArray());
-        
+        //发送请求
         writePacket(qp, true);
+
+        //获取响应
         readPacket(qp);        
         final long newEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());
 		if (qp.getType() == Leader.LEADERINFO) {

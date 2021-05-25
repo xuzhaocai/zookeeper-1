@@ -234,12 +234,14 @@ public class QuorumCnxManager {
             // Read server id
             DataInputStream din = new DataInputStream(sock.getInputStream());
             sid = din.readLong();
+
+            //如果是默认的observer id
             if (sid == QuorumPeer.OBSERVER_ID) {
                 /*
                  * Choose identifier at random. We need a value to identify
                  * the connection.
                  */
-                
+                // 为observer角色的peer生成serverId ，其实就是个负数
                 sid = observerCounter--;
                 LOG.info("Setting arbitrary identifier to observer: " + sid);
             }
@@ -248,7 +250,8 @@ public class QuorumCnxManager {
             LOG.warn("Exception reading or writing challenge: " + e.toString());
             return false;
         }
-        
+        // 如果对端的serverId 小于 我现在自己的serverId 就关闭连接，重新建立连接
+        // 这里就是限定只能 serverId大的 向serverId小的发起连接请求，建立连接啥的
         //If wins the challenge, then close the new connection.
         if (sid < self.getId()) {
             /*
@@ -265,7 +268,9 @@ public class QuorumCnxManager {
              * Now we start a new connection
              */
             LOG.debug("Create new connection to server: " + sid);
+            // 关闭连接
             closeSocket(sock);
+            // 重新建立连接
             connectOne(sid);
 
             // Otherwise start worker threads to receive data.
@@ -501,10 +506,12 @@ public class QuorumCnxManager {
                             .toString());
                     ss.bind(addr);
                     while (!shutdown) {
+                        // 接受连接，创建连接
                         Socket client = ss.accept();
                         setSockOpts(client);
                         LOG.info("Received connection request "
                                 + client.getRemoteSocketAddress());
+
                         receiveConnection(client);
                         numRetries = 0;
                     }
@@ -624,7 +631,12 @@ public class QuorumCnxManager {
             threadCnt.decrementAndGet();
             return running;
         }
-        
+
+        /**
+         * 发送
+         * @param b
+         * @throws IOException
+         */
         synchronized void send(ByteBuffer b) throws IOException {
             byte[] msgBytes = new byte[b.capacity()];
             try {
@@ -634,6 +646,7 @@ public class QuorumCnxManager {
                 LOG.error("BufferUnderflowException ", be);
                 return;
             }
+            // 直接写出去
             dout.writeInt(b.capacity());
             dout.write(b.array());
             dout.flush();
@@ -674,9 +687,11 @@ public class QuorumCnxManager {
 
                     ByteBuffer b = null;
                     try {
+                        // 获取发送队列
                         ArrayBlockingQueue<ByteBuffer> bq = queueSendMap
                                 .get(sid);
                         if (bq != null) {
+                            //从队列中获取buffer
                             b = pollSendQueue(bq, 1000, TimeUnit.MILLISECONDS);
                         } else {
                             LOG.error("No queue of incoming messages for " +
@@ -685,7 +700,9 @@ public class QuorumCnxManager {
                         }
 
                         if(b != null){
+                            //最后一次发送的消息
                             lastMessageSent.put(sid, b);
+                            //发送
                             send(b);
                         }
                     } catch (InterruptedException e) {
@@ -757,6 +774,7 @@ public class QuorumCnxManager {
                      * Reads the first int to determine the length of the
                      * message
                      */
+                    // 先读出第一个int值，代表消息长度
                     int length = din.readInt();
                     if (length <= 0 || length > PACKETMAXSIZE) {
                         throw new IOException(
@@ -767,8 +785,10 @@ public class QuorumCnxManager {
                      * Allocates a new ByteBuffer to receive the message
                      */
                     byte[] msgArray = new byte[length];
+                    //读这些长度的数据出来就可以了
                     din.readFully(msgArray, 0, length);
                     ByteBuffer message = ByteBuffer.wrap(msgArray);
+                    //添加到接收队列中
                     addToRecvQueue(new Message(message.duplicate(), sid));
                 }
             } catch (Exception e) {

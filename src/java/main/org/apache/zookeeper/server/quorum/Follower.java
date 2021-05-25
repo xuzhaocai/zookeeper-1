@@ -66,13 +66,18 @@ public class Follower extends Learner{
         self.end_fle = 0;
         fzk.registerJMX(new FollowerBean(this, zk), self.jmxLocalPeerBean);
         try {
+
+            // 找出leader的地址
             InetSocketAddress addr = findLeader();            
             try {
+                //进行连接
                 connectToLeader(addr);
+                //注册到leader上
                 long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
 
                 //check to see if the leader zxid is lower than ours
                 //this should never happen but is just a safety check
+                // 这里是说看看leader epoch是否小于我们，这里只是个安全检查
                 long newEpoch = ZxidUtils.getEpochFromZxid(newEpochZxid);
                 if (newEpoch < self.getAcceptedEpoch()) {
                     LOG.error("Proposed leader epoch " + ZxidUtils.zxidToString(newEpochZxid)

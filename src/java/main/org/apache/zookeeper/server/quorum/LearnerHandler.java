@@ -247,10 +247,14 @@ public class LearnerHandler extends Thread {
             }
             byte learnerInfoData[] = qp.getData();
             if (learnerInfoData != null) {
+
+                // 如果是8位的话，就一个serverId
             	if (learnerInfoData.length == 8) {
             		ByteBuffer bbsid = ByteBuffer.wrap(learnerInfoData);
             		this.sid = bbsid.getLong();
             	} else {
+
+            	    // 如果不是的话，将serverId与version解析出来
             		LearnerInfo li = new LearnerInfo();
             		ByteBufferInputStream.byteBuffer2Record(ByteBuffer.wrap(learnerInfoData), li);
             		this.sid = li.getServerid();
@@ -266,11 +270,12 @@ public class LearnerHandler extends Thread {
             if (qp.getType() == Leader.OBSERVERINFO) {
                   learnerType = LearnerType.OBSERVER;
             }            
-            
+            //获取epoch
             long lastAcceptedEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());
             
             long peerLastZxid;
             StateSummary ss = null;
+            //获取zxid
             long zxid = qp.getZxid();
             long newEpoch = leader.getEpochToPropose(this.getSid(), lastAcceptedEpoch);
             
