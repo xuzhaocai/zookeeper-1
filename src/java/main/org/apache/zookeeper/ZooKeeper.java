@@ -439,13 +439,18 @@ public class ZooKeeper {
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
 
         watchManager.defaultWatcher = watcher;
-
+        // 连接解析器
         ConnectStringParser connectStringParser = new ConnectStringParser(
                 connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
+
+        //客户端连接
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
+
+
+                // 这里默认是使用ClientCnxnSocketNIO
                 getClientCnxnSocket(), canBeReadOnly);
         cnxn.start();
     }

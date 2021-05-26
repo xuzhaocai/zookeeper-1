@@ -48,6 +48,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
          * this is to avoid the jvm bug:
          * NullPointerException in Selector.open()
          * http://bugs.sun.com/view_bug.do?bug_id=6427854
+         * 
+         * 
+         * 这里是为了避免jvm bug的
          */
         try {
             Selector.open().close();
@@ -160,8 +163,17 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         }
     }
 
+    /**
+     * 创建连接
+     * @param sock
+     * @param sk
+     * @return
+     * @throws IOException
+     */
     protected NIOServerCnxn createConnection(SocketChannel sock,
             SelectionKey sk) throws IOException {
+
+        // 创建连接
         return new NIOServerCnxn(zkServer, sock, sk, this);
     }
 
@@ -186,13 +198,19 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                 }
                 ArrayList<SelectionKey> selectedList = new ArrayList<SelectionKey>(
                         selected);
+
+                // shuffle 就是为了随机的执行selectionKey
                 Collections.shuffle(selectedList);
                 for (SelectionKey k : selectedList) {
+
+                    // 如果是新连接接入的话
                     if ((k.readyOps() & SelectionKey.OP_ACCEPT) != 0) {
                         SocketChannel sc = ((ServerSocketChannel) k
                                 .channel()).accept();
                         InetAddress ia = sc.socket().getInetAddress();
                         int cnxncount = getClientCnxnCount(ia);
+
+                        // 判断是否超过最大连接数，如果超过，直接关闭
                         if (maxClientCnxns > 0 && cnxncount >= maxClientCnxns){
                             LOG.warn("Too many connections from " + ia
                                      + " - max is " + maxClientCnxns );
@@ -201,14 +219,27 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                             LOG.info("Accepted socket connection from "
                                      + sc.socket().getRemoteSocketAddress());
                             sc.configureBlocking(false);
+
+                            // 到selector中注册 ，关心read事件
                             SelectionKey sk = sc.register(selector,
                                     SelectionKey.OP_READ);
+
+                            // 创建连接
                             NIOServerCnxn cnxn = createConnection(sc, sk);
+
+                            // 将这个创建的连接对象 放到socketChannel附加属性里面
                             sk.attach(cnxn);
+
+                            // 添加到ipMap  与cnxns中
                             addCnxn(cnxn);
                         }
+
+
+                        //read 与write 事件
                     } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
                         NIOServerCnxn c = (NIOServerCnxn) k.attachment();
+
+                        // 执行io操作
                         c.doIO(k);
                     } else {
                         if (LOG.isDebugEnabled()) {

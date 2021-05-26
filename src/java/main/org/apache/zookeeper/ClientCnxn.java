@@ -379,7 +379,10 @@ public class ClientCnxn {
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
+        // 发送线程
         sendThread = new SendThread(clientCnxnSocket);
+
+        // 事件线程
         eventThread = new EventThread();
 
     }
@@ -399,7 +402,11 @@ public class ClientCnxn {
         disableAutoWatchReset = b;
     }
     public void start() {
+
+        // 发送线程启动
         sendThread.start();
+
+        //事件线程启动
         eventThread.start();
     }
 
@@ -934,6 +941,7 @@ public class ClientCnxn {
                 addr = rwServerAddress;
                 rwServerAddress = null;
             } else {
+                // 获取addr
                 addr = hostProvider.next(1000);
             }
 
@@ -954,7 +962,7 @@ public class ClientCnxn {
                 saslLoginFailed = true;
             }
             logStartConnect(addr);
-
+            //建立连接
             clientCnxnSocket.connect(addr);
         }
 
@@ -972,7 +980,11 @@ public class ClientCnxn {
         @Override
         public void run() {
             clientCnxnSocket.introduce(this,sessionId);
+
+            // 更新时间
             clientCnxnSocket.updateNow();
+
+            //更新最后send 和 heard时间
             clientCnxnSocket.updateLastSendAndHeard();
             int to;
             long lastPingRwServer = System.currentTimeMillis();
@@ -990,10 +1002,14 @@ public class ClientCnxn {
                         if (closing || !state.isAlive()) {
                             break;
                         }
+
+                        // 进行连接
                         startConnect();
+
+                        // 更新时间
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
-
+                    // 如果已经连接
                     if (state.isConnected()) {
                         // determine whether we need to send an AuthFailed event.
                         if (zooKeeperSaslClient != null) {
@@ -1038,6 +1054,8 @@ public class ClientCnxn {
                                         + " for sessionid 0x"
                                         + Long.toHexString(sessionId));
                     }
+
+                    // 状态是已连接的话
                     if (state.isConnected()) {
                         int timeToNextPing = readTimeout / 2
                                 - clientCnxnSocket.getIdleSend();
@@ -1050,7 +1068,7 @@ public class ClientCnxn {
                             }
                         }
                     }
-
+                    // 如果处于只读模式，则寻找读/写服务器
                     // If we are in read-only mode, seek for read/write server
                     if (state == States.CONNECTEDREADONLY) {
                         long now = System.currentTimeMillis();

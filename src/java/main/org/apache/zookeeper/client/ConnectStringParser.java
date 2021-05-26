@@ -32,6 +32,8 @@ import org.apache.zookeeper.common.PathUtils;
  * ZOOKEEPER-849.
  * 
  * @see org.apache.zookeeper.ZooKeeper
+ *
+ * 连接信息解析器
  */
 public final class ConnectStringParser {
     private static final int DEFAULT_PORT = 2181;
@@ -47,10 +49,13 @@ public final class ConnectStringParser {
      */
     public ConnectStringParser(String connectString) {
         // parse out chroot, if any
+        // 解析chroot
         int off = connectString.indexOf('/');
         if (off >= 0) {
             String chrootPath = connectString.substring(off);
             // ignore "/" chroot spec, same as null
+
+            // 如果单单是个 /  ，其实就是默认的
             if (chrootPath.length() == 1) {
                 this.chrootPath = null;
             } else {
@@ -61,10 +66,12 @@ public final class ConnectStringParser {
         } else {
             this.chrootPath = null;
         }
-
+        // 使用逗号分隔
         String hostsList[] = connectString.split(",");
         for (String host : hostsList) {
             int port = DEFAULT_PORT;
+
+            // 解析端口
             int pidx = host.lastIndexOf(':');
             if (pidx >= 0) {
                 // otherwise : is at the end of the string, ignore
@@ -73,6 +80,7 @@ public final class ConnectStringParser {
                 }
                 host = host.substring(0, pidx);
             }
+            // 解析完成后，放入serverAddresses 集合中
             serverAddresses.add(InetSocketAddress.createUnresolved(host, port));
         }
     }

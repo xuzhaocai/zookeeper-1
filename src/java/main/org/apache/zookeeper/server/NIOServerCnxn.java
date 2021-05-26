@@ -206,6 +206,11 @@ public class NIOServerCnxn extends ServerCnxn {
         }
     }
 
+    /**
+     * 执行io操作
+     * @param k
+     * @throws InterruptedException
+     */
     void doIO(SelectionKey k) throws InterruptedException {
         try {
             if (sock == null) {
@@ -214,6 +219,8 @@ public class NIOServerCnxn extends ServerCnxn {
 
                 return;
             }
+
+            // 如果是可以读
             if (k.isReadable()) {
                 int rc = sock.read(incomingBuffer);
                 if (rc < 0) {
@@ -232,7 +239,10 @@ public class NIOServerCnxn extends ServerCnxn {
                         // continuation
                         isPayload = true;
                     }
+
+                    // 如果是有效的
                     if (isPayload) { // not the case for 4letterword
+                        // 执行read操作
                         readPayload();
                     }
                     else {

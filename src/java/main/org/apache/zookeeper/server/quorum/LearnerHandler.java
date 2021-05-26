@@ -286,11 +286,16 @@ public class LearnerHandler extends Thread {
                 // fake the message
                 leader.waitForEpochAck(this.getSid(), ss);
             } else {
+
+                // 将leader信息写出去
                 byte ver[] = new byte[4];
                 ByteBuffer.wrap(ver).putInt(0x10000);
                 QuorumPacket newEpochPacket = new QuorumPacket(Leader.LEADERINFO, ZxidUtils.makeZxid(newEpoch, 0), ver, null);
                 oa.writeRecord(newEpochPacket, "packet");
                 bufferedOutput.flush();
+
+
+
                 QuorumPacket ackEpochPacket = new QuorumPacket();
                 ia.readRecord(ackEpochPacket, "packet");
                 if (ackEpochPacket.getType() != Leader.ACKEPOCH) {
@@ -300,6 +305,7 @@ public class LearnerHandler extends Thread {
 				}
                 ByteBuffer bbepoch = ByteBuffer.wrap(ackEpochPacket.getData());
                 ss = new StateSummary(bbepoch.getInt(), ackEpochPacket.getZxid());
+
                 leader.waitForEpochAck(this.getSid(), ss);
             }
             peerLastZxid = ss.getLastZxid();

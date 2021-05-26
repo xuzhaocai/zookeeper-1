@@ -271,8 +271,11 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     
     @Override
     void connect(InetSocketAddress addr) throws IOException {
+        //建立连接
         SocketChannel sock = createSock();
         try {
+
+            // 注册
            registerAndConnect(sock, addr);
         } catch (IOException e) {
             LOG.error("Unable to open socket to " + addr);
@@ -335,6 +338,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
                      ClientCnxn cnxn)
             throws IOException, InterruptedException {
+
+        //进行select
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;
         synchronized (this) {
@@ -346,11 +351,14 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         updateNow();
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
+            // 事件
             if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {
-                if (sc.finishConnect()) {
+                if (sc.finishConnect()) {// 如果完成连接的建立
                     updateLastSendAndHeard();
                     sendThread.primeConnection();
                 }
+
+                // 读写事件
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
                 doIO(pendingQueue, outgoingQueue, cnxn);
             }
