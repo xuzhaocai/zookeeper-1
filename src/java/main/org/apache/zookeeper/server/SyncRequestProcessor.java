@@ -93,7 +93,10 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
             int randRoll = r.nextInt(snapCount/2);
             while (true) {
                 Request si = null;
+
+                //如果需要刷盘的链表是空，说明比较闲，这个时候等着就可以了
                 if (toFlush.isEmpty()) {
+                    //阻塞take
                     si = queuedRequests.take();
                 } else {
                     si = queuedRequests.poll();
@@ -107,11 +110,12 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
                 }
                 if (si != null) {
                     // track the number of records written to the log
+                    // 往snaplog 中追加
                     if (zks.getZKDatabase().append(si)) {
                         logCount++;
                         if (logCount > (snapCount / 2 + randRoll)) {
                             randRoll = r.nextInt(snapCount/2);
-                            // roll the log
+                            // roll the log 滚日志（跟kafka那个滚日志差不多） 刷盘，重新创建日志文件
                             zks.getZKDatabase().rollLog();
                             // take a snapshot
                             if (snapInProcess != null && snapInProcess.isAlive()) {
@@ -141,7 +145,11 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
                         }
                         continue;
                     }
+
+                    // 将需要刷盘的放入toFlush链表中
                     toFlush.add(si);
+
+                    //大于1000，就进行刷盘
                     if (toFlush.size() > 1000) {
                         flush(toFlush);
                     }
@@ -160,7 +168,7 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
     {
         if (toFlush.isEmpty())
             return;
-
+        //提交
         zks.getZKDatabase().commit();
         while (!toFlush.isEmpty()) {
             Request i = toFlush.remove();
@@ -184,6 +192,10 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
         nextProcessor.shutdown();
     }
 
+    /**
+     * 处理请求，这里就是添加到队列中
+     * @param request
+     */
     public void processRequest(Request request) {
         // request.addRQRec(">sync");
         queuedRequests.add(request);

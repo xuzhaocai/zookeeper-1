@@ -147,7 +147,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
      * Creates a ZooKeeperServer instance. It sets everything up, but doesn't
      * actually start listening for clients until run() is invoked.
      * 
-     * @param dataDir the directory to put the data
+
      */
     public ZooKeeperServer(FileTxnSnapLog txnLogFactory, int tickTime,
             int minSessionTimeout, int maxSessionTimeout,
@@ -643,10 +643,14 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         }
         try {
             touch(si.cnxn);
+            // 验证请求类型
             boolean validpacket = Request.isValid(si.type);
+
+            //符合请求类型的话
             if (validpacket) {
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
+                    //请求处理数+1
                     incInProcess();
                 }
             } else {
@@ -906,6 +910,8 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 ReplyHeader rh = new ReplyHeader(h.getXid(), 0, KeeperException.Code.OK.intValue());
                 cnxn.sendResponse(rh,rsp, "response"); // not sure about 3rd arg..what is it?
             }
+
+            //普通的请求
             else {
                 Request si = new Request(cnxn, cnxn.getSessionId(), h.getXid(),
                   h.getType(), incomingBuffer, cnxn.getAuthInfo());

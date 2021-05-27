@@ -142,6 +142,12 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         }
     }
 
+    /**
+     * 找到能发送的packet
+     * @param outgoingQueue
+     * @param clientTunneledAuthenticationInProgress
+     * @return
+     */
     private Packet findSendablePacket(LinkedList<Packet> outgoingQueue,
                                       boolean clientTunneledAuthenticationInProgress) {
         synchronized (outgoingQueue) {

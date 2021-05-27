@@ -81,8 +81,12 @@ public class ZKDatabase {
      * @param snapLog the FileTxnSnapLog mapping this zkdatabase
      */
     public ZKDatabase(FileTxnSnapLog snapLog) {
+
+        // 数据树
         dataTree = new DataTree();
         sessionsWithTimeouts = new ConcurrentHashMap<Long, Integer>();
+
+        //快照日志
         this.snapLog = snapLog;
     }
     
@@ -257,6 +261,8 @@ public class ZKDatabase {
             }
             QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid,
                     baos.toByteArray(), null);
+
+            //创建proposal
             Proposal p = new Proposal();
             p.packet = pp;
             p.request = request;

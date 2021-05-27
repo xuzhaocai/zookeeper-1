@@ -102,6 +102,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
             RequestProcessor nextProcessor) {
         super("ProcessThread(sid:" + zks.getServerId()
                 + " cport:" + zks.getClientPort() + "):");
+
+        // 下一个处理器
         this.nextProcessor = nextProcessor;
         this.zks = zks;
     }
@@ -117,6 +119,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
     public void run() {
         try {
             while (true) {
+
+                //取出请求
                 Request request = submittedRequests.take();
                 long traceMask = ZooTrace.CLIENT_REQUEST_TRACE_MASK;
                 if (request.type == OpCode.ping) {
@@ -128,6 +132,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 if (Request.requestOfDeath == request) {
                     break;
                 }
+
+                // 处理请求
                 pRequest(request);
             }
         } catch (InterruptedException e) {
@@ -143,6 +149,12 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
         LOG.info("PrepRequestProcessor exited loop!");
     }
 
+    /**
+     * 根据path获取record
+     * @param path
+     * @return
+     * @throws KeeperException.NoNodeException
+     */
     ChangeRecord getRecordForPath(String path) throws KeeperException.NoNodeException {
         ChangeRecord lastChange = null;
         synchronized (zks.outstandingChanges) {
@@ -156,6 +168,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
             }
             */
             if (lastChange == null) {
+                //从database中获取path对应的dataNode
                 DataNode n = zks.getZKDatabase().getNode(path);
                 if (n != null) {
                     Long acl;
@@ -323,6 +336,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 if (!fixupACL(request.authInfo, listACL)) {
                     throw new KeeperException.InvalidACLException(path);
                 }
+
+                //截取parentPath
                 String parentPath = path.substring(0, lastSlash);
                 ChangeRecord parentRecord = getRecordForPath(parentPath);
 
@@ -342,6 +357,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                     throw new KeeperException.BadArgumentsException(path);
                 }
                 try {
+
+                    // 校验已经存在的情况
                     if (getRecordForPath(path) != null) {
                         throw new KeeperException.NodeExistsException(path);
                     }
@@ -363,6 +380,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 parentRecord = parentRecord.duplicate(request.hdr.getZxid());
                 parentRecord.childCount++;
                 parentRecord.stat.setCversion(newCversion);
+
+                // 添加到改变记录中
                 addChangeRecord(parentRecord);
                 addChangeRecord(new ChangeRecord(request.hdr.getZxid(), path, s,
                         0, listACL));
