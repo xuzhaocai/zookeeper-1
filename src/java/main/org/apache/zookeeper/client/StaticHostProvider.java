@@ -94,7 +94,7 @@ public final class StaticHostProvider implements HostProvider {
 
         return serverAddresses.get(currentIndex);
     }
-
+    // 连接后，将lastIndex设置成currentIndex
     public void onConnected() {
         lastIndex = currentIndex;
     }

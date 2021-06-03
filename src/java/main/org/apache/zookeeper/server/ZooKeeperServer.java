@@ -284,6 +284,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         return hzxid;
     }
 
+
+    /**
+     * 获取zxid ，其实就是hzxid这个变量做++操作，然后使用synchronized做线程安全操作
+     * @return
+     */
     synchronized long getNextZxid() {
         return ++hzxid;
     }
@@ -642,12 +647,14 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             }
         }
         try {
+            //这个主要是刷新一下session过期时间
             touch(si.cnxn);
             // 验证请求类型
             boolean validpacket = Request.isValid(si.type);
 
             //符合请求类型的话
             if (validpacket) {
+                // 将请求交给处理器链来处理
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     //请求处理数+1

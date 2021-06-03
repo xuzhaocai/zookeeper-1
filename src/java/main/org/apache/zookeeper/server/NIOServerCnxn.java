@@ -231,8 +231,8 @@ public class NIOServerCnxn extends ServerCnxn {
                 }
                 if (incomingBuffer.remaining() == 0) {
                     boolean isPayload;
-                    if (incomingBuffer == lenBuffer) { // start of next request
-                        incomingBuffer.flip();
+                    if (incomingBuffer == lenBuffer) { // start of next request 到这里说明是一个请求的开头
+                        incomingBuffer.flip();// 给他恢复原样
                         isPayload = readLength(k);
                         incomingBuffer.clear();
                     } else {
@@ -240,7 +240,7 @@ public class NIOServerCnxn extends ServerCnxn {
                         isPayload = true;
                     }
 
-                    // 如果是有效的
+                    // 如果数据是全的
                     if (isPayload) { // not the case for 4letterword
                         // 执行read操作
                         readPayload();
@@ -372,6 +372,9 @@ public class NIOServerCnxn extends ServerCnxn {
     }
 
     private void readRequest() throws IOException {
+        /**
+         * 处理请求
+         */
         zkServer.processPacket(this, incomingBuffer);
     }
     
@@ -934,6 +937,8 @@ public class NIOServerCnxn extends ServerCnxn {
         if (zkServer == null) {
             throw new IOException("ZooKeeperServer not running");
         }
+
+        // 申请这些内存的bytebuffer
         incomingBuffer = ByteBuffer.allocate(len);
         return true;
     }

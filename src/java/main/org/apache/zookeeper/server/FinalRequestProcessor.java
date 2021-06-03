@@ -97,8 +97,14 @@ public class FinalRequestProcessor implements RequestProcessor {
         }
         ProcessTxnResult rc = null;
         synchronized (zks.outstandingChanges) {
+
+
+            // 这里其实就是移除掉那些比较小的zxid
             while (!zks.outstandingChanges.isEmpty()
+
+                    // outstandingChanges第一个的zxid小于等于这个请求zxid
                     && zks.outstandingChanges.get(0).zxid <= request.zxid) {
+                //移除
                 ChangeRecord cr = zks.outstandingChanges.remove(0);
                 if (cr.zxid < request.zxid) {
                     LOG.warn("Zxid outstanding "
@@ -109,6 +115,9 @@ public class FinalRequestProcessor implements RequestProcessor {
                     zks.outstandingChangesForPath.remove(cr.path);
                 }
             }
+
+
+
             if (request.hdr != null) {
                TxnHeader hdr = request.hdr;
                Record txn = request.txn;
@@ -120,7 +129,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 zks.getZKDatabase().addCommittedProposal(request);
             }
         }
-
+        // 关闭session
         if (request.hdr != null && request.hdr.getType() == OpCode.closeSession) {
             ServerCnxnFactory scxn = zks.getServerCnxnFactory();
             // this might be possible since
@@ -401,6 +410,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                     request.createTime, System.currentTimeMillis());
 
         try {
+            //发送响应
             cnxn.sendResponse(hdr, rsp, "response");
             if (closeSession) {
                 cnxn.sendCloseSession();

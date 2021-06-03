@@ -42,8 +42,6 @@ public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
     CommitProcessor commitProcessor;
 
     /**
-     * @param port
-     * @param dataDir
      * @throws IOException
      */
     LeaderZooKeeperServer(FileTxnSnapLog logFactory, QuorumPeer self,
@@ -55,12 +53,17 @@ public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
     public Leader getLeader(){
         return self.leader;
     }
-    
+
+    /**
+     * 设置requestProcessor
+     */
     @Override
     protected void setupRequestProcessors() {
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
         RequestProcessor toBeAppliedProcessor = new Leader.ToBeAppliedRequestProcessor(
                 finalProcessor, getLeader().toBeApplied);
+
+        // 线程
         commitProcessor = new CommitProcessor(toBeAppliedProcessor,
                 Long.toString(getServerId()), false);
         commitProcessor.start();

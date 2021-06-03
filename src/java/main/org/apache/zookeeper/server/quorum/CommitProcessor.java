@@ -74,6 +74,8 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                     nextProcessor.processRequest(toProcess.get(i));
                 }
                 toProcess.clear();
+
+
                 synchronized (this) {
                     if ((queuedRequests.size() == 0 || nextPending != null)
                             && committedRequests.size() == 0) {
@@ -160,6 +162,8 @@ public class CommitProcessor extends Thread implements RequestProcessor {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Committing request:: " + request);
             }
+
+            //添加committedRequests链表中
             committedRequests.add(request);
             notifyAll();
         }

@@ -625,6 +625,10 @@ public class LearnerHandler extends Thread {
         queuePacket(ping);
     }
 
+    /**
+     * 放到队列中
+     * @param p
+     */
     void queuePacket(QuorumPacket p) {
         queuedPackets.add(p);
     }

@@ -141,10 +141,16 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         return ss.socket().getLocalPort();
     }
 
+    /**
+     * 缓存连接信息
+     * @param cnxn
+     */
     private void addCnxn(NIOServerCnxn cnxn) {
         synchronized (cnxns) {
             cnxns.add(cnxn);
             synchronized (ipMap){
+
+                //获取对应的addr
                 InetAddress addr = cnxn.sock.socket().getInetAddress();
                 Set<NIOServerCnxn> s = ipMap.get(addr);
                 if (s == null) {
@@ -233,8 +239,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                             // 添加到ipMap  与cnxns中
                             addCnxn(cnxn);
                         }
-
-
                         //read 与write 事件
                     } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
                         NIOServerCnxn c = (NIOServerCnxn) k.attachment();

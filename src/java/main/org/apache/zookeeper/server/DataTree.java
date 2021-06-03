@@ -112,6 +112,8 @@ public class DataTree {
 
     /**
      * This hashtable lists the paths of the ephemeral nodes of a session.
+     *
+     * 存放临时节点 ，主要是 sessionId与 path的对应关系
      */
     private final Map<Long, HashSet<String>> ephemerals =
         new ConcurrentHashMap<Long, HashSet<String>>();
@@ -466,6 +468,8 @@ public class DataTree {
         stat.setVersion(0);
         stat.setAversion(0);
         stat.setEphemeralOwner(ephemeralOwner);
+
+        // 获取到父节点
         DataNode parent = nodes.get(parentName);
         if (parent == null) {
             throw new KeeperException.NoNodeException();
@@ -473,6 +477,8 @@ public class DataTree {
         synchronized (parent) {
             Set<String> children = parent.getChildren();
             if (children != null) {
+
+                // 如果已经存在，抛出异常
                 if (children.contains(childName)) {
                     throw new KeeperException.NodeExistsException();
                 }
@@ -485,9 +491,14 @@ public class DataTree {
             parent.stat.setCversion(parentCVersion);
             parent.stat.setPzxid(zxid);
             Long longval = convertAcls(acl);
+
+            // 创建node
             DataNode child = new DataNode(parent, data, longval, stat);
             parent.addChild(childName);
+
+
             nodes.put(path, child);
+            // 如果是临时节点，添加对session对应的set 集合中
             if (ephemeralOwner != 0) {
                 HashSet<String> list = ephemerals.get(ephemeralOwner);
                 if (list == null) {
@@ -519,7 +530,11 @@ public class DataTree {
             updateCount(lastPrefix, 1);
             updateBytes(lastPrefix, data == null ? 0 : data.length);
         }
+        //出发监听器，触发watch
         dataWatches.triggerWatch(path, Event.EventType.NodeCreated);
+
+
+        // 触发子节点监听器
         childWatches.triggerWatch(parentName.equals("") ? "/" : parentName,
                 Event.EventType.NodeChildrenChanged);
         return path;

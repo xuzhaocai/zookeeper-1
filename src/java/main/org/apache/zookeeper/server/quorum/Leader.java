@@ -565,18 +565,23 @@ public class Leader {
             // The proposal has already been committed
             return;
         }
+
+
+        // 取出zxid对应的proposal
         Proposal p = outstandingProposals.get(zxid);
         if (p == null) {
             LOG.warn("Trying to commit future proposal: zxid 0x{} from {}",
                     Long.toHexString(zxid), followerAddr);
             return;
         }
-        
+        // 添加响应成功的serverId
         p.ackSet.add(sid);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Count for zxid: 0x{} is {}",
                     Long.toHexString(zxid), p.ackSet.size());
         }
+
+        // 这里就是看看有没有过半，如果响应ack过半
         if (self.getQuorumVerifier().containsQuorum(p.ackSet)){             
             if (zxid != lastCommitted+1) {
                 LOG.warn("Commiting zxid 0x{} from {} not first!",
@@ -585,6 +590,8 @@ public class Leader {
             }
             outstandingProposals.remove(zxid);
             if (p.request != null) {
+
+                // 添加到toBeApplied队列中
                 toBeApplied.add(p);
             }
             // We don't commit the new leader proposal
@@ -592,8 +599,11 @@ public class Leader {
                 if (p.request == null) {
                     LOG.warn("Going to commmit null request for proposal: {}", p);
                 }
+                //做commit操作，这里就是告诉follower进行事务提交
                 commit(zxid);
+                // 发送给Observer
                 inform(p);
+                // 自己做提交
                 zk.commitProcessor.commit(p.request);
                 if(pendingSyncs.containsKey(zxid)){
                     for(LearnerSyncRequest r: pendingSyncs.remove(zxid)) {
@@ -646,6 +656,8 @@ public class Leader {
          */
         public void processRequest(Request request) throws RequestProcessorException {
             // request.addRQRec(">tobe");
+
+            // 先提交，将消息写入内存中
             next.processRequest(request);
             Proposal p = toBeApplied.peek();
             if (p != null && p.request != null
@@ -667,6 +679,8 @@ public class Leader {
 
     /**
      * send a packet to all the followers ready to follow
+     *
+     * 发送信息给所有的learner ，也就是发送给follower
      * 
      * @param qp
      *                the packet to be sent
@@ -697,15 +711,18 @@ public class Leader {
      */
     public void commit(long zxid) {
         synchronized(this){
+            // 最后提交的zxid
             lastCommitted = zxid;
         }
+
+        //封装commit packet
         QuorumPacket qp = new QuorumPacket(Leader.COMMIT, zxid, null, null);
+        //向follower发送commit提交
         sendPacket(qp);
     }
     
     /**
      * Create an inform packet and send it to all observers.
-     * @param zxid
      * @param proposal
      */
     public void inform(Proposal proposal) {   
@@ -772,7 +789,7 @@ public class Leader {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Proposing:: " + request);
             }
-
+            //记录最后一个proposal 的zxid
             lastProposed = p.packet.getZxid();
             outstandingProposals.put(lastProposed, p);
             sendPacket(pp);

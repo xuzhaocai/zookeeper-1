@@ -108,6 +108,8 @@ public class Follower extends Learner{
 
     /**
      * Examine the packet received in qp and dispatch based on its contents.
+     * 
+     * 处理请求
      * @param qp
      * @throws IOException
      */

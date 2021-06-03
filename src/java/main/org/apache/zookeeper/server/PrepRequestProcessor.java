@@ -320,12 +320,14 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                                     zks.getTime(), type);
 
         switch (type) {
-            case OpCode.create:                
+            case OpCode.create:
+                // 检查session
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
                 CreateRequest createRequest = (CreateRequest)record;   
                 if(deserialize)
                     ByteBufferInputStream.byteBuffer2Record(request.request, createRequest);
                 String path = createRequest.getPath();
+
                 int lastSlash = path.lastIndexOf('/');
                 if (lastSlash == -1 || path.indexOf('\0') != -1 || failCreate) {
                     LOG.info("Invalid path " + path + " with session 0x" +
@@ -336,17 +338,22 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 if (!fixupACL(request.authInfo, listACL)) {
                     throw new KeeperException.InvalidACLException(path);
                 }
-
-                //截取parentPath
+                //截取parentPath    /dubbo/providers     截取之后就成了/dubbo
                 String parentPath = path.substring(0, lastSlash);
                 ChangeRecord parentRecord = getRecordForPath(parentPath);
-
+                // 检查acl
                 checkACL(zks, parentRecord.acl, ZooDefs.Perms.CREATE,
                         request.authInfo);
                 int parentCVersion = parentRecord.stat.getCversion();
+
+                //这里就是将flag转成CreateMode，这个CreateMode 就是持久节点，持久顺序节点，临时节点，临时顺序节点
                 CreateMode createMode =
                     CreateMode.fromFlag(createRequest.getFlags());
+
+                // 顺序节点
                 if (createMode.isSequential()) {
+
+                    // 生成顺序节点的path    /dubbo/  =》 /dubbo0000000001
                     path = path + String.format(Locale.ENGLISH, "%010d", parentCVersion);
                 }
                 try {
@@ -357,7 +364,6 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                     throw new KeeperException.BadArgumentsException(path);
                 }
                 try {
-
                     // 校验已经存在的情况
                     if (getRecordForPath(path) != null) {
                         throw new KeeperException.NodeExistsException(path);
@@ -365,23 +371,31 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 } catch (KeeperException.NoNodeException e) {
                     // ignore this one
                 }
+
+                //这里其实判断父节点是不是临时节点
                 boolean ephemeralParent = parentRecord.stat.getEphemeralOwner() != 0;
                 if (ephemeralParent) {
+                    // 临时节点是不能挂子类的
                     throw new KeeperException.NoChildrenForEphemeralsException(path);
                 }
+                // 对父节点的cversion+1
                 int newCversion = parentRecord.stat.getCversion()+1;
                 request.txn = new CreateTxn(path, createRequest.getData(),
                         listACL,
                         createMode.isEphemeral(), newCversion);
                 StatPersisted s = new StatPersisted();
+
+                // 如果是临时节点的话，就是设置临时节点拥有者
                 if (createMode.isEphemeral()) {
                     s.setEphemeralOwner(request.sessionId);
                 }
                 parentRecord = parentRecord.duplicate(request.hdr.getZxid());
                 parentRecord.childCount++;
+
+                // 其实这里就将父节点的cversion 设置进去
                 parentRecord.stat.setCversion(newCversion);
 
-                // 添加到改变记录中
+                // 添加到改变记录中 包括子类与父类的
                 addChangeRecord(parentRecord);
                 addChangeRecord(new ChangeRecord(request.hdr.getZxid(), path, s,
                         0, listACL));
@@ -532,6 +546,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
             switch (request.type) {
                 case OpCode.create:
                 CreateRequest createRequest = new CreateRequest();
+
+                // zks.getNextZxid() :这里是通过zks 获取的zxid。
                 pRequest2Txn(request.type, zks.getNextZxid(), request, createRequest, true);
                 break;
             case OpCode.delete:

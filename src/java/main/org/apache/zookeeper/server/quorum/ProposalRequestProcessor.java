@@ -43,6 +43,8 @@ public class ProposalRequestProcessor implements RequestProcessor {
             RequestProcessor nextProcessor) {
         this.zks = zks;
         this.nextProcessor = nextProcessor;
+
+        // 创建一个syncProcessor
         AckRequestProcessor ackProcessor = new AckRequestProcessor(zks.getLeader());
         syncProcessor = new SyncRequestProcessor(zks, ackProcessor);
     }
@@ -75,6 +77,8 @@ public class ProposalRequestProcessor implements RequestProcessor {
             if (request.hdr != null) {
                 // We need to sync and get consensus on any transactions
                 try {
+
+                    // 发送proposal请求
                     zks.getLeader().propose(request);
                 } catch (XidRolloverException e) {
                     throw new RequestProcessorException(e.getMessage(), e);
